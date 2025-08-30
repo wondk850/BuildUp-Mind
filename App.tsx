@@ -1,10 +1,10 @@
 
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
-import { ActionLog, Badge, BadgeId, Goal, UserStats, Difficulty, Project, ChatMessage } from './types';
+import { ActionLog, Badge, BadgeId, Goal, UserStats, Difficulty, Project, ChatMessage, BackupData } from './types';
 import { XP_PER_ACTION, XP_STREAK_BONUS_PER_DAY, LEVEL_UP_BASE_XP, DIFFICULTY_Q_MAP } from './constants';
 // FIX: Import 'getAICoachResponse' to make it available in the component.
 import { generateInsightfulQuote, getAICoachResponse } from './services/geminiService';
-import { BadgeIcon, ChartBarIcon, CheckCircleIcon, FireIcon, LevelUpIcon, StarIcon, PencilIcon, PlusIcon, ChevronDownIcon, TrashIcon, ChatBubbleLeftRightIcon, CalendarDaysIcon } from './components/Icons';
+import { BadgeIcon, ChartBarIcon, CheckCircleIcon, FireIcon, LevelUpIcon, StarIcon, PencilIcon, PlusIcon, ChevronDownIcon, TrashIcon, ChatBubbleLeftRightIcon, CalendarDaysIcon, CogIcon } from './components/Icons';
 import { Modal } from './components/ui/Modal';
 import { Card } from './components/ui/Card';
 import { ProbabilitySimulator } from './components/ProbabilitySimulator';
@@ -17,6 +17,7 @@ import { ReflectionModal } from './components/ReflectionModal';
 import { ActionLogDetailModal } from './components/ActionLogDetailModal';
 import { LevelUpModal } from './components/LevelUpModal';
 import { ParticleEffect } from './components/ParticleEffect';
+import { SettingsModal } from './components/SettingsModal';
 
 
 // Helper to get today's date string
@@ -62,8 +63,9 @@ interface HeaderProps {
   onAddNewGoal: () => void;
   onOpenStats: () => void;
   onOpenAICoach: () => void;
+  onOpenSettings: () => void;
 }
-const Header: React.FC<HeaderProps> = ({ level, xp, xpForNextLevel, streak, projects, goals, activeGoalId, onSelectGoal, onAddNewGoal, onOpenStats, onOpenAICoach }) => {
+const Header: React.FC<HeaderProps> = ({ level, xp, xpForNextLevel, streak, projects, goals, activeGoalId, onSelectGoal, onAddNewGoal, onOpenStats, onOpenAICoach, onOpenSettings }) => {
   const xpPercentage = (xp / xpForNextLevel) * 100;
 
   const groupedGoals = useMemo(() => {
@@ -117,6 +119,14 @@ const Header: React.FC<HeaderProps> = ({ level, xp, xpForNextLevel, streak, proj
                     </button>
                     <div className="absolute bottom-full mb-2 left-1/2 -translate-x-1/2 w-max bg-slate-800 text-white text-xs rounded py-1 px-2 opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none">
                         통계
+                    </div>
+                </div>
+                 <div className="relative group">
+                    <button onClick={onOpenSettings} className="w-auto flex items-center justify-center gap-2 bg-white border border-slate-300 text-slate-700 font-semibold p-2.5 rounded-lg hover:bg-slate-100 transition-colors shadow-sm" aria-label="Settings">
+                        <CogIcon className="w-5 h-5"/>
+                    </button>
+                    <div className="absolute bottom-full mb-2 left-1/2 -translate-x-1/2 w-max bg-slate-800 text-white text-xs rounded py-1 px-2 opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none">
+                        설정
                     </div>
                 </div>
             </div>
@@ -188,6 +198,17 @@ const ActionCard: React.FC<ActionCardProps> = ({ goal, isCompletedToday, onCompl
 
 // --- Main App Component ---
 
+const APP_DATA_KEYS: Array<keyof BackupData> = [
+    'buildup-projects',
+    'buildup-goals',
+    'buildup-activeGoalId',
+    'buildup-stats',
+    'buildup-logs',
+    'buildup-badges',
+    'buildup-lastWeeklySummary',
+    'buildup-chatHistory',
+];
+
 function App() {
   const [projects, setProjects] = useLocalStorage<Project[]>('buildup-projects', []);
   const [goals, setGoals] = useLocalStorage<Goal[]>('buildup-goals', []);
@@ -204,6 +225,7 @@ function App() {
   const [isLevelUpModalOpen, setIsLevelUpModalOpen] = useState(false);
   const [currentView, setCurrentView] = useState<'main' | 'dashboard' | 'coach'>('main');
   const [isWeeklySummaryModalOpen, setIsWeeklySummaryModalOpen] = useState(false);
+  const [isSettingsModalOpen, setIsSettingsModalOpen] = useState(false);
   const [weeklySummaryData, setWeeklySummaryData] = useState({ completions: 0 });
   const [showConfetti, setShowConfetti] = useState(false);
 
@@ -325,7 +347,7 @@ function App() {
     setTimeout(() => setShowConfetti(false), 4000);
 
     const { difficulty, projectId } = activeGoal;
-    const newLog: ActionLog = { date: todayStr, reflection: '', goalId: activeGoal.id, projectId, difficulty };
+    const newLog: ActionLog = { date: todayStr, reflection: '', goalId: activeGoal.id, projectId, difficulty, timestamp: Date.now() };
     
     setLogs(prev => ({ ...prev, [todayStr]: [...(prev[todayStr] || []), newLog] }));
     
@@ -437,6 +459,59 @@ function App() {
           setIsCoachLoading(false);
       }
   };
+  
+  const handleExportData = () => {
+    try {
+      const dataToExport: Partial<BackupData> = {};
+      APP_DATA_KEYS.forEach(key => {
+        const item = localStorage.getItem(key);
+        if (item) {
+          dataToExport[key] = JSON.parse(item);
+        }
+      });
+      const jsonString = `data:text/json;charset=utf-8,${encodeURIComponent(JSON.stringify(dataToExport, null, 2))}`;
+      const link = document.createElement('a');
+      link.href = jsonString;
+      link.download = `buildup-mind-backup-${new Date().toISOString().split('T')[0]}.json`;
+      link.click();
+    } catch (error) {
+      console.error("Failed to export data:", error);
+      alert("데이터 내보내기에 실패했습니다.");
+    }
+  };
+  
+  const handleImportData = (file: File) => {
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      try {
+        const importedData = JSON.parse(event.target?.result as string) as Partial<BackupData>;
+        
+        const requiredKeys = ['buildup-projects', 'buildup-goals', 'buildup-stats'];
+        const hasRequiredKeys = requiredKeys.every(key => key in importedData);
+
+        if (!hasRequiredKeys) {
+          alert("유효하지 않은 백업 파일입니다. 필수 데이터가 누락되었습니다.");
+          return;
+        }
+
+        if (window.confirm("데이터를 가져오면 현재 모든 데이터가 덮어쓰여집니다. 계속하시겠습니까?")) {
+          APP_DATA_KEYS.forEach(key => {
+            if (importedData[key]) {
+              localStorage.setItem(key, JSON.stringify(importedData[key]));
+            } else {
+              localStorage.removeItem(key);
+            }
+          });
+          alert("데이터를 성공적으로 가져왔습니다. 앱을 새로고침합니다.");
+          window.location.reload();
+        }
+      } catch (error) {
+        console.error("Failed to import data:", error);
+        alert("데이터 가져오기에 실패했습니다. 파일 형식을 확인해주세요.");
+      }
+    };
+    reader.readAsText(file);
+  };
 
   const xpForNextLevel = LEVEL_UP_BASE_XP * stats.level;
   const completedDaysCount = activeGoal ? Object.values(logs).flat().filter(l => l.goalId === activeGoal.id).length : 0;
@@ -458,6 +533,7 @@ function App() {
                 onAddNewGoal={handleAddNewGoal}
                 onOpenStats={() => setCurrentView('dashboard')}
                 onOpenAICoach={() => setCurrentView('coach')}
+                onOpenSettings={() => setIsSettingsModalOpen(true)}
             />
             
             <main className="max-w-4xl mx-auto grid grid-cols-1 lg:grid-cols-3 gap-8">
@@ -519,6 +595,13 @@ function App() {
         isOpen={isLevelUpModalOpen}
         onClose={() => setIsLevelUpModalOpen(false)}
         level={achievedLevel}
+      />
+      
+      <SettingsModal
+        isOpen={isSettingsModalOpen}
+        onClose={() => setIsSettingsModalOpen(false)}
+        onExport={handleExportData}
+        onImport={handleImportData}
       />
 
       <GoalModal

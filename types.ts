@@ -23,6 +23,7 @@ export interface ActionLog {
   goalId: string;
   projectId: string;
   difficulty: Difficulty;
+  timestamp?: number;
 }
 
 export interface UserStats {
@@ -60,4 +61,15 @@ export interface GoalTemplate {
   title: string;
   difficulty: Difficulty;
   description: string;
+}
+
+export interface BackupData {
+  'buildup-projects': Project[];
+  'buildup-goals': Goal[];
+  'buildup-activeGoalId': string | null;
+  'buildup-stats': UserStats;
+  'buildup-logs': { [date: string]: ActionLog[] };
+  'buildup-badges': BadgeId[];
+  'buildup-lastWeeklySummary': string;
+  'buildup-chatHistory': ChatMessage[];
 }
