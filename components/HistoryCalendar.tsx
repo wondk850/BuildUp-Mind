@@ -1,6 +1,7 @@
 import React from 'react';
 import { Card } from './ui/Card';
 import { ActionLog } from '../types';
+import { getLocalDateString } from '../utils/dateUtils';
 
 interface HistoryCalendarProps {
   logs: { [date: string]: ActionLog[] };
@@ -11,6 +12,7 @@ export const HistoryCalendar: React.FC<HistoryCalendarProps> = ({ logs, onDayCli
   const today = new Date();
   const year = today.getFullYear();
   const month = today.getMonth();
+  const todayString = getLocalDateString(today);
 
   const firstDayOfMonth = new Date(year, month, 1);
   const lastDayOfMonth = new Date(year, month + 1, 0);
@@ -27,8 +29,8 @@ export const HistoryCalendar: React.FC<HistoryCalendarProps> = ({ logs, onDayCli
   // Add cells for each day of the month
   for (let day = 1; day <= daysInMonth; day++) {
     const date = new Date(year, month, day);
-    const dateString = date.toISOString().split('T')[0];
-    const isToday = dateString === today.toISOString().split('T')[0];
+    const dateString = getLocalDateString(date);
+    const isToday = dateString === todayString;
     const isCompleted = logs[dateString] && logs[dateString].length > 0;
 
     calendarDays.push(

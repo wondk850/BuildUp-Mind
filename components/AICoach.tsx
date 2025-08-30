@@ -1,3 +1,4 @@
+
 import React, { useState, useRef, useEffect } from 'react';
 import { ChatMessage } from '../types';
 
@@ -81,7 +82,7 @@ export const AICoach: React.FC<AICoachProps> = ({ chatHistory, onSendMessage, is
             value={input}
             onChange={(e) => setInput(e.target.value)}
             placeholder="AI 코치에게 메시지를 보내보세요..."
-            className="flex-1 w-full bg-white border border-slate-300 rounded-lg shadow-sm py-3 px-4 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500"
+            className="flex-1 w-full bg-white border border-slate-300 rounded-lg shadow-sm py-3 px-4 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 text-slate-900"
             disabled={isLoading}
           />
           <button

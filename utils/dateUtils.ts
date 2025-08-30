@@ -1,5 +1,12 @@
 import { ActionLog } from "../types";
 
+export const getLocalDateString = (date: Date): string => {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, '0');
+  const day = String(date.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
+};
+
 export const getWeekNumber = (d: Date): [number, number] => {
   const date = new Date(d.getTime());
   date.setHours(0, 0, 0, 0);
@@ -16,7 +23,7 @@ export const getPastWeekDates = (): string[] => {
     for (let i = 0; i < 7; i++) {
         const d = new Date();
         d.setDate(d.getDate() - i);
-        dates.push(d.toISOString().split('T')[0]);
+        dates.push(getLocalDateString(d));
     }
     return dates;
 }
@@ -38,7 +45,7 @@ export const generateYearHeatmapData = (logs: { [date: string]: ActionLog[] }): 
         currentDate.setDate(oneYearAgo.getDate() + i);
         if (currentDate > today) break;
 
-        const dateString = currentDate.toISOString().split('T')[0];
+        const dateString = getLocalDateString(currentDate);
         const logCount = logs[dateString]?.length || 0;
         data.push({ date: dateString, count: logCount });
     }

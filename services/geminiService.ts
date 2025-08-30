@@ -1,3 +1,4 @@
+
 import { GoogleGenAI, Type, Chat } from "@google/genai";
 import type { ChatMessage } from '../types';
 
@@ -29,7 +30,8 @@ export const recommendProbability = async (goalTitle: string): Promise<number> =
                         description: "The recommended probability percentage."
                     },
                 },
-                required: ["probability"]
+                // FIX: `required` is not a valid property for responseSchema. Replaced with `propertyOrdering` to guide model output.
+                propertyOrdering: ["probability"]
             },
         }
     });
@@ -76,7 +78,8 @@ export const generateInsightfulQuote = async (goalTitle: string): Promise<{korea
                     description: "The motivational quote in English."
                 },
             },
-            required: ["korean", "english"]
+            // FIX: `required` is not a valid property for responseSchema. Replaced with `propertyOrdering` to guide model output.
+            propertyOrdering: ["korean", "english"]
         },
       }
     });

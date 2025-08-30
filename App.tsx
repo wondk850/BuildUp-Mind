@@ -1,3 +1,6 @@
+
+
+
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { ActionLog, Badge, BadgeId, Goal, UserStats, Difficulty, Project, ChatMessage } from './types';
 import { XP_PER_ACTION, XP_STREAK_BONUS_PER_DAY, LEVEL_UP_BASE_XP } from './constants';
@@ -7,13 +10,17 @@ import { Modal } from './components/ui/Modal';
 import { Card } from './components/ui/Card';
 import { ProbabilitySimulator } from './components/ProbabilitySimulator';
 import { HistoryCalendar } from './components/HistoryCalendar';
-import { getPastWeekDates, getWeekNumber } from './utils/dateUtils';
+import { getLocalDateString, getPastWeekDates, getWeekNumber } from './utils/dateUtils';
 import { StatsDashboard } from './components/StatsDashboard';
 import { AICoach } from './components/AICoach';
+import { GoalModal } from './components/GoalModal';
+import { ReflectionModal } from './components/ReflectionModal';
+import { ActionLogDetailModal } from './components/ActionLogDetailModal';
+import { LevelUpModal } from './components/LevelUpModal';
 
 
 // Helper to get today's date string
-const getTodayDateString = () => new Date().toISOString().split('T')[0];
+const getTodayDateString = () => getLocalDateString(new Date());
 
 // Custom hook for localStorage
 const useLocalStorage = <T,>(key: string, initialValue: T): [T, React.Dispatch<React.SetStateAction<T>>] => {
@@ -252,7 +259,7 @@ function App() {
     let streak = 0;
     let d = new Date();
     // Check if today has a log. If not, the streak is 0, start check from yesterday.
-    const todayLogs = logs[d.toISOString().split('T')[0]] || [];
+    const todayLogs = logs[getLocalDateString(d)] || [];
     if (todayLogs.length === 0) {
         d.setDate(d.getDate() - 1);
     }
@@ -261,7 +268,7 @@ function App() {
 
     // Count consecutive days with logs backwards from today/yesterday.
     while (true) {
-        const dateStr = d.toISOString().split('T')[0];
+        const dateStr = getLocalDateString(d);
         if (logs[dateStr] && logs[dateStr].length > 0 && !checkedDays.has(dateStr)) {
             streak++;
             checkedDays.add(dateStr);
@@ -494,25 +501,18 @@ function App() {
         onClose={() => setIsLevelUpModalOpen(false)}
         level={achievedLevel}
       />
-      
-      <ReflectionViewModal 
-        log={viewedLog}
-        goalTitle={goals.find(g => g.id === viewedLog?.goalId)?.title}
-        onClose={() => setViewedLog(null)}
-      />
 
-      <GoalSetupModal 
+      <GoalModal
         isOpen={isGoalModalOpen}
-        onClose={() => { setGoalModalOpen(false); setEditingGoal(null); }}
-        onSave={(goalData, projectId) => {
-            const id = editingGoal?.id
-            if (projectId === 'new_project') return; // Should be handled inside modal
-            handleSaveGoal(goalData, projectId, id)
+        onClose={() => {
+          setEditingGoal(null);
+          setGoalModalOpen(false);
         }}
+        onSave={handleSaveGoal}
         onDelete={handleDeleteGoal}
-        currentGoal={editingGoal}
         projects={projects}
         setProjects={setProjects}
+        existingGoal={editingGoal}
       />
 
       <ReflectionModal
@@ -520,331 +520,35 @@ function App() {
         onClose={() => setReflectionModalOpen(false)}
         onSave={handleSaveReflection}
         quote={insightfulQuote}
-        isLoading={isLoadingQuote}
+        isLoadingQuote={isLoadingQuote}
       />
-    
-      <WeeklySummaryModal
-        isOpen={isWeeklySummaryModalOpen}
-        onClose={() => {
-          const [year, week] = getWeekNumber(new Date());
-          setLastWeeklySummary(`${year}-${week}`);
-          setIsWeeklySummaryModalOpen(false);
-        }}
-        completions={weeklySummaryData.completions}
-        streak={stats.streak}
+
+      <ActionLogDetailModal
+        log={viewedLog}
+        goal={viewedLog ? goals.find(g => g.id === viewedLog.goalId) : null}
+        onClose={() => setViewedLog(null)}
       />
+      
+       <Modal 
+          isOpen={isWeeklySummaryModalOpen} 
+          onClose={() => {
+            const today = new Date();
+            const [year, week] = getWeekNumber(today);
+            const currentWeekId = `${year}-${week}`;
+            setLastWeeklySummary(currentWeekId);
+            setIsWeeklySummaryModalOpen(false);
+          }}
+          title="주간 요약"
+        >
+           <div>
+            <p className="text-lg text-slate-700">지난 주에 <span className="font-bold text-indigo-600">{weeklySummaryData.completions}번</span>의 행동을 완료하셨습니다!</p>
+            <p className="text-slate-500 mt-2">꾸준함이 성장의 열쇠입니다. 이번 주도 화이팅!</p>
+          </div>
+        </Modal>
+
     </div>
   );
 }
 
-interface LevelUpModalProps {
-  isOpen: boolean;
-  onClose: () => void;
-  level: number | null;
-}
-const LevelUpModal: React.FC<LevelUpModalProps> = ({ isOpen, onClose, level }) => {
-    if (!isOpen || !level) return null;
-    return (
-        <Modal isOpen={isOpen} onClose={onClose} title="레벨 업!">
-            <div className="text-center p-6">
-                <LevelUpIcon className="w-20 h-20 text-yellow-400 mx-auto mb-4 animate-bounce" />
-                <h3 className="text-3xl font-bold text-slate-800 mb-2">축하합니다!</h3>
-                <p className="text-5xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-indigo-500 to-purple-500 mb-4">
-                    레벨 {level}
-                </p>
-                <p className="text-slate-500">당신의 꾸준함이 빛을 발하는 순간입니다. 계속 나아가세요!</p>
-                <button onClick={onClose} className="mt-8 w-full bg-indigo-600 text-white font-bold py-2.5 px-4 rounded-lg hover:bg-indigo-700 transition-colors">
-                    계속하기
-                </button>
-            </div>
-        </Modal>
-    );
-}
-
-interface GoalSetupModalProps {
-    isOpen: boolean;
-    onClose: () => void;
-    onSave: (goalData: Omit<Goal, 'id' | 'projectId'>, projectId: string, id?: string) => void;
-    onDelete: (id: string) => void;
-    currentGoal: Goal | null;
-    projects: Project[];
-    setProjects: React.Dispatch<React.SetStateAction<Project[]>>;
-}
-const GoalSetupModal: React.FC<GoalSetupModalProps> = ({ isOpen, onClose, onSave, onDelete, currentGoal, projects, setProjects }) => {
-    const [title, setTitle] = useState('');
-    const [q, setQ] = useState(0.001);
-    const [difficulty, setDifficulty] = useState<Difficulty>(Difficulty.Normal);
-    const [selectedProjectId, setSelectedProjectId] = useState<string>('');
-    const [newProjectName, setNewProjectName] = useState('');
-    const [isRecommending, setIsRecommending] = useState(false);
-
-    useEffect(() => {
-        if (isOpen) {
-            if (currentGoal) {
-                setTitle(currentGoal.title);
-                setQ(currentGoal.q);
-                setDifficulty(currentGoal.difficulty);
-                setSelectedProjectId(currentGoal.projectId);
-            } else {
-                setTitle('');
-                setQ(0.001);
-                setDifficulty(Difficulty.Normal);
-                setSelectedProjectId(projects.length > 0 ? projects[0].id : 'new_project');
-            }
-            setNewProjectName('');
-        }
-    }, [currentGoal, isOpen, projects]);
-    
-    const handleSubmit = (e: React.FormEvent) => {
-        e.preventDefault();
-        let finalProjectId = selectedProjectId;
-        if (selectedProjectId === 'new_project') {
-            if (!newProjectName.trim()) {
-                alert('새 프로젝트 이름을 입력해주세요.');
-                return;
-            }
-            const newProject = { id: Date.now().toString(), name: newProjectName.trim() };
-            setProjects(prev => [...prev, newProject]);
-            finalProjectId = newProject.id;
-        }
-        onSave({ title, q, difficulty }, finalProjectId, currentGoal?.id);
-    };
-
-    const handleRecommendation = async () => {
-        if (!title) {
-            alert("AI가 분석할 수 있도록 먼저 오늘의 행동(목표)을 입력해주세요.");
-            return;
-        }
-        setIsRecommending(true);
-        try {
-            const recommendedQ = await recommendProbability(title);
-            setQ(recommendedQ / 100);
-        } catch (error) {
-            console.error("Failed to get recommendation", error);
-            alert("추천 값을 가져오는 데 실패했습니다. 잠시 후 다시 시도해주세요.");
-        } finally {
-            setIsRecommending(false);
-        }
-    };
-
-    return (
-        <Modal isOpen={isOpen} onClose={onClose} title={currentGoal ? "목표 수정하기" : "새 목표 설정하기"}>
-            <p className="text-slate-500 mb-6">"오늘, 확실한 한 가지를 정해볼래요?"</p>
-            <form onSubmit={handleSubmit} className="space-y-6">
-                <div>
-                    <label htmlFor="project-select" className="block text-sm font-medium text-slate-700 mb-1">프로젝트</label>
-                    <select
-                        id="project-select"
-                        value={selectedProjectId}
-                        onChange={e => setSelectedProjectId(e.target.value)}
-                        className="block w-full bg-white border border-slate-300 rounded-lg shadow-sm py-2 px-3 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500"
-                    >
-                        {projects.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
-                        <option value="new_project">새 프로젝트 만들기</option>
-                    </select>
-                </div>
-
-                {selectedProjectId === 'new_project' && (
-                    <div>
-                        <label htmlFor="new-project-name" className="block text-sm font-medium text-slate-700 mb-1">새 프로젝트 이름</label>
-                        <input
-                            type="text"
-                            id="new-project-name"
-                            value={newProjectName}
-                            onChange={e => setNewProjectName(e.target.value)}
-                            placeholder="예: 건강한 삶 만들기"
-                            className="block w-full bg-white border border-slate-300 rounded-lg shadow-sm py-2 px-3 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500"
-                        />
-                    </div>
-                )}
-                
-                <div>
-                    <label htmlFor="goal-title" className="block text-sm font-medium text-slate-700 mb-1">빌드업 행동 (Sub-task)</label>
-                    <input 
-                        type="text" 
-                        id="goal-title" 
-                        value={title}
-                        onChange={e => setTitle(e.target.value)}
-                        placeholder="예: 30분 운동하기"
-                        className="block w-full bg-white border border-slate-300 rounded-lg shadow-sm py-2 px-3 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500"
-                        required
-                    />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-slate-700 mb-2">난이도</label>
-                  <div className="grid grid-cols-3 gap-2">
-                      {(Object.values(Difficulty) as Difficulty[]).map(d => (
-                          <button
-                              type="button"
-                              key={d}
-                              onClick={() => setDifficulty(d)}
-                              className={`py-2 px-3 rounded-lg text-sm font-semibold border transition-colors ${difficulty === d ? 'bg-indigo-600 border-indigo-600 text-white' : 'bg-white border-slate-300 text-slate-700 hover:bg-slate-100'}`}
-                          >
-                            {d === Difficulty.Easy ? '쉬움' : d === Difficulty.Normal ? '보통' : '어려움'}
-                          </button>
-                      ))}
-                  </div>
-                </div>
-                 <div>
-                    <label htmlFor="goal-q" className="block text-sm font-medium text-slate-700 mb-1">초기 성공 확률 (%)</label>
-                    <div className="flex items-center gap-2">
-                      <input 
-                          type="number" 
-                          id="goal-q" 
-                          value={q * 100}
-                          onChange={e => setQ(Number(e.target.value) / 100)}
-                          step="0.01"
-                          min="0.01"
-                          max="10"
-                          className="block w-full bg-white border border-slate-300 rounded-lg shadow-sm py-2 px-3 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 disabled:opacity-50"
-                          required
-                          disabled={isRecommending}
-                      />
-                      <button 
-                          type="button" 
-                          onClick={handleRecommendation}
-                          disabled={isRecommending || !title}
-                          className="bg-indigo-600 text-white font-semibold py-2 px-4 rounded-lg hover:bg-indigo-700 transition-colors flex-shrink-0 disabled:bg-slate-400 disabled:cursor-not-allowed"
-                      >
-                          {isRecommending ? '분석 중...' : 'AI 추천'}
-                      </button>
-                    </div>
-                     <p className="text-xs text-slate-500 mt-2">이 행동이 최종 목표에 기여하는 정도입니다. AI 추천을 받아보세요.</p>
-                </div>
-                <div className="flex gap-2 pt-2">
-                    {currentGoal && (
-                        <button 
-                            type="button" 
-                            onClick={() => onDelete(currentGoal.id)}
-                            className="w-auto bg-red-600 text-white p-2.5 rounded-lg hover:bg-red-700 transition-colors"
-                        >
-                            <TrashIcon className="w-5 h-5" />
-                        </button>
-                    )}
-                    <button type="submit" className="w-full bg-indigo-600 text-white font-bold py-2.5 px-4 rounded-lg hover:bg-indigo-700 transition-colors">
-                        저장하기
-                    </button>
-                </div>
-            </form>
-        </Modal>
-    );
-};
-
-interface ReflectionModalProps {
-    isOpen: boolean;
-    onClose: () => void;
-    onSave: (reflection: string) => void;
-    quote: { korean: string; english: string };
-    isLoading: boolean;
-}
-const ReflectionModal: React.FC<ReflectionModalProps> = ({ isOpen, onClose, onSave, quote, isLoading }) => {
-    const [reflection, setReflection] = useState('');
-
-    const handleSave = () => {
-        onSave(reflection);
-        setReflection('');
-    };
-
-    useEffect(() => {
-      if (!isOpen) {
-        setReflection('');
-      }
-    }, [isOpen]);
-
-    return (
-        <Modal isOpen={isOpen} onClose={onClose} title="오늘의 마무리">
-            <div className="space-y-6">
-                <div>
-                    <h3 className="text-lg font-semibold text-slate-700 mb-2">오늘의 성찰</h3>
-                    <textarea 
-                        value={reflection}
-                        onChange={e => setReflection(e.target.value)}
-                        placeholder="오늘 행동을 통해 무엇을 느끼고 배웠나요? (1~3문장)"
-                        rows={3}
-                        className="w-full bg-white border border-slate-300 rounded-lg shadow-sm p-2 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500"
-                    />
-                </div>
-                <div className="p-4 bg-indigo-50 border border-indigo-200 rounded-lg text-slate-700 text-center">
-                  <h3 className="text-lg font-semibold text-indigo-600 mb-3">오늘의 영감</h3>
-                  <div className="min-h-[80px] flex flex-col items-center justify-center mb-4 px-2">
-                      {isLoading ? <p>AI가 당신을 위한 메시지를 만들고 있어요...</p> : 
-                      (
-                        <>
-                            <p className="italic text-lg">"{quote.korean}"</p>
-                            <p className="italic text-sm text-slate-500 mt-2">"{quote.english}"</p>
-                        </>
-                      )}
-                  </div>
-                </div>
-                <button onClick={handleSave} className="w-full bg-indigo-600 text-white font-bold py-2 px-4 rounded-lg hover:bg-indigo-700 transition-colors">
-                    기록 완료
-                </button>
-            </div>
-        </Modal>
-    )
-}
-
-interface ReflectionViewModalProps {
-    log: ActionLog | null;
-    goalTitle?: string;
-    onClose: () => void;
-}
-const ReflectionViewModal: React.FC<ReflectionViewModalProps> = ({ log, goalTitle, onClose }) => {
-    if (!log) return null;
-    
-    return (
-        <Modal isOpen={!!log} onClose={onClose} title={`${log.date}의 기록`}>
-            <div className="space-y-4">
-                <div>
-                    <p className="text-sm text-slate-500">완료한 행동</p>
-                    <p className="text-lg font-semibold">{goalTitle || '삭제된 목표'}</p>
-                </div>
-                <div>
-                    <p className="text-sm text-slate-500">나의 성찰</p>
-                    {log.reflection ? (
-                        <p className="text-slate-700 bg-slate-100 p-3 rounded-md whitespace-pre-wrap">{log.reflection}</p>
-                    ) : (
-                        <p className="text-slate-400 italic">이날은 성찰을 기록하지 않았습니다.</p>
-                    )}
-                </div>
-                <button onClick={onClose} className="mt-4 w-full bg-slate-200 text-slate-700 font-bold py-2 px-4 rounded-lg hover:bg-slate-300 transition-colors">
-                    닫기
-                </button>
-            </div>
-        </Modal>
-    )
-}
-
-interface WeeklySummaryModalProps {
-  isOpen: boolean;
-  onClose: () => void;
-  completions: number;
-  streak: number;
-}
-const WeeklySummaryModal: React.FC<WeeklySummaryModalProps> = ({ isOpen, onClose, completions, streak }) => {
-  return (
-    <Modal isOpen={isOpen} onClose={onClose} title="주간 리포트">
-      <div className="text-center p-4">
-        <h3 className="text-2xl font-bold text-slate-800 mb-2">한 주 동안 수고하셨어요!</h3>
-        <p className="text-slate-500 mb-6">지난 7일간의 노력을 확인해보세요.</p>
-        <div className="flex justify-around items-center bg-slate-100 rounded-lg p-6">
-          <div className="text-center">
-            <p className="text-4xl font-bold text-indigo-600">{completions}</p>
-            <p className="text-sm text-slate-500">완료한 행동</p>
-          </div>
-          <div className="text-center">
-            <p className="text-4xl font-bold text-orange-500">{streak}</p>
-            <p className="text-sm text-slate-500">현재 연속 기록</p>
-          </div>
-        </div>
-        <p className="text-slate-500 mt-6">당신의 꾸준함이 미래를 만듭니다. 다음 주도 화이팅!</p>
-        <button onClick={onClose} className="mt-8 w-full bg-indigo-600 text-white font-bold py-2.5 px-4 rounded-lg hover:bg-indigo-700 transition-colors">
-          확인
-        </button>
-      </div>
-    </Modal>
-  );
-};
-
-
+// FIX: Add default export for App component to resolve module import error in index.tsx.
 export default App;

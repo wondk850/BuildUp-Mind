@@ -2,7 +2,7 @@ import React, { useMemo } from 'react';
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip as RechartsTooltip } from 'recharts';
 import { Card } from './ui/Card';
 import { Project, ActionLog, UserStats, Difficulty } from '../types';
-import { generateYearHeatmapData } from '../utils/dateUtils';
+import { generateYearHeatmapData, getLocalDateString } from '../utils/dateUtils';
 import { StarIcon, FireIcon, TargetIcon, BoltIcon, CalendarDaysIcon, LevelUpIcon } from './Icons';
 
 interface StatsDashboardProps {
@@ -12,8 +12,8 @@ interface StatsDashboardProps {
   onBack: () => void;
 }
 
-// FIX: Changed icon prop type to React.ReactElement to fix typing error with cloneElement.
-const StatCard = ({ icon, title, value, unit, colorClass }: { icon: React.ReactElement, title: string, value: string | number, unit?: string, colorClass: string }) => (
+// FIX: Updated the icon prop type to be more specific. This resolves the React.cloneElement typing error by informing TypeScript that the icon component accepts a className prop.
+const StatCard = ({ icon, title, value, unit, colorClass }: { icon: React.ReactElement<{ className?: string }>, title: string, value: string | number, unit?: string, colorClass: string }) => (
     <Card className="flex items-center p-4">
         <div className={`p-3 rounded-full mr-4 ${colorClass.replace('text-', 'bg-').replace('600', '100')}`}>
             {React.cloneElement(icon, { className: `w-6 h-6 ${colorClass}` })}
@@ -44,7 +44,7 @@ export const StatsDashboard: React.FC<StatsDashboardProps> = ({ projects, logs, 
     for (let i = 0; i < 30; i++) {
         const d = new Date();
         d.setDate(d.getDate() - i);
-        const dateStr = d.toISOString().split('T')[0];
+        const dateStr = getLocalDateString(d);
         if (logs[dateStr] && logs[dateStr].length > 0) {
             last30Days.add(dateStr);
         }
