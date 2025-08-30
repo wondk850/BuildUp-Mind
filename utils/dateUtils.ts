@@ -18,9 +18,9 @@ export const getWeekNumber = (d: Date): [number, number] => {
   return [date.getFullYear(), Math.round(((date.getTime() - week1.getTime()) / 86400000 - 3 + (week1.getDay() + 6) % 7) / 7) + 1];
 }
 
-export const getPastWeekDates = (): string[] => {
+export const getPastWeekDates = (days: number = 7): string[] => {
     const dates = [];
-    for (let i = 0; i < 7; i++) {
+    for (let i = 0; i < days; i++) {
         const d = new Date();
         d.setDate(d.getDate() - i);
         dates.push(getLocalDateString(d));

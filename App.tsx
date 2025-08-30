@@ -1,11 +1,10 @@
 
-
-
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { ActionLog, Badge, BadgeId, Goal, UserStats, Difficulty, Project, ChatMessage } from './types';
-import { XP_PER_ACTION, XP_STREAK_BONUS_PER_DAY, LEVEL_UP_BASE_XP } from './constants';
-import { generateInsightfulQuote, recommendProbability, getAICoachResponse } from './services/geminiService';
-import { BadgeIcon, ChartBarIcon, CheckCircleIcon, FireIcon, LevelUpIcon, StarIcon, PencilIcon, PlusIcon, ChevronDownIcon, TrashIcon, ChatBubbleLeftRightIcon } from './components/Icons';
+import { XP_PER_ACTION, XP_STREAK_BONUS_PER_DAY, LEVEL_UP_BASE_XP, DIFFICULTY_Q_MAP } from './constants';
+// FIX: Import 'getAICoachResponse' to make it available in the component.
+import { generateInsightfulQuote, getAICoachResponse } from './services/geminiService';
+import { BadgeIcon, ChartBarIcon, CheckCircleIcon, FireIcon, LevelUpIcon, StarIcon, PencilIcon, PlusIcon, ChevronDownIcon, TrashIcon, ChatBubbleLeftRightIcon, CalendarDaysIcon } from './components/Icons';
 import { Modal } from './components/ui/Modal';
 import { Card } from './components/ui/Card';
 import { ProbabilitySimulator } from './components/ProbabilitySimulator';
@@ -17,6 +16,7 @@ import { GoalModal } from './components/GoalModal';
 import { ReflectionModal } from './components/ReflectionModal';
 import { ActionLogDetailModal } from './components/ActionLogDetailModal';
 import { LevelUpModal } from './components/LevelUpModal';
+import { ParticleEffect } from './components/ParticleEffect';
 
 
 // Helper to get today's date string
@@ -205,6 +205,7 @@ function App() {
   const [currentView, setCurrentView] = useState<'main' | 'dashboard' | 'coach'>('main');
   const [isWeeklySummaryModalOpen, setIsWeeklySummaryModalOpen] = useState(false);
   const [weeklySummaryData, setWeeklySummaryData] = useState({ completions: 0 });
+  const [showConfetti, setShowConfetti] = useState(false);
 
   const [viewedLog, setViewedLog] = useState<ActionLog | null>(null);
   
@@ -239,7 +240,7 @@ function App() {
     const [year, week] = getWeekNumber(today);
     const currentWeekId = `${year}-${week}`;
     if (lastWeeklySummary !== currentWeekId) {
-      const pastWeekDates = getPastWeekDates();
+      const pastWeekDates = getPastWeekDates(7);
       const completions = pastWeekDates.reduce((acc, date) => acc + (logs[date]?.length || 0), 0);
       if (completions > 0) {
         setWeeklySummaryData({ completions });
@@ -252,13 +253,14 @@ function App() {
     { id: BadgeId.FIRST_ACTION, name: "첫 걸음", description: "첫 행동을 완료했습니다.", icon: <StarIcon className="w-5 h-5"/>, earned: false },
     { id: BadgeId.STREAK_7, name: "7일 연속", description: "7일 연속으로 행동을 완료했습니다.", icon: <FireIcon className="w-5 h-5"/>, earned: false },
     { id: BadgeId.STREAK_30, name: "30일 연속", description: "30일 연속으로 행동을 완료했습니다.", icon: <FireIcon className="w-5 h-5 text-orange-400"/>, earned: false },
-    { id: BadgeId.LEVEL_10, name: "레벨 10 달성", description: "레벨 10에 도달했습니다.", icon: <LevelUpIcon className="w-5 h-5"/>, earned: false }
+    { id: BadgeId.LEVEL_10, name: "레벨 10 달성", description: "레벨 10에 도달했습니다.", icon: <LevelUpIcon className="w-5 h-5"/>, earned: false },
+    { id: BadgeId.PERFECT_WEEK, name: "완벽한 한 주", description: "한 주(7일) 동안 매일 행동을 완료했습니다.", icon: <CalendarDaysIcon className="w-5 h-5"/>, earned: false },
+    { id: BadgeId.REFLECTION_KING, name: "성찰의 왕", description: "성찰 기록을 50회 이상 작성했습니다.", icon: <PencilIcon className="w-5 h-5"/>, earned: false }
   ].map(b => ({ ...b, earned: badges.includes(b.id) })), [badges]);
 
   const checkStreak = useCallback(() => {
     let streak = 0;
     let d = new Date();
-    // Check if today has a log. If not, the streak is 0, start check from yesterday.
     const todayLogs = logs[getLocalDateString(d)] || [];
     if (todayLogs.length === 0) {
         d.setDate(d.getDate() - 1);
@@ -266,7 +268,6 @@ function App() {
     
     const checkedDays = new Set<string>();
 
-    // Count consecutive days with logs backwards from today/yesterday.
     while (true) {
         const dateStr = getLocalDateString(d);
         if (logs[dateStr] && logs[dateStr].length > 0 && !checkedDays.has(dateStr)) {
@@ -287,18 +288,48 @@ function App() {
     }
   }, [logs, checkStreak, stats.streak, setStats]);
 
+  useEffect(() => {
+    const allLogsFlat = Object.values(logs).flat();
+    const newBadges = new Set(badges);
+    let updated = false;
+
+    const checkAndAdd = (id: BadgeId, condition: boolean) => {
+        if (condition && !badges.includes(id)) {
+            newBadges.add(id);
+            updated = true;
+        }
+    };
+
+    checkAndAdd(BadgeId.FIRST_ACTION, allLogsFlat.length > 0);
+    checkAndAdd(BadgeId.STREAK_7, stats.streak >= 7);
+    checkAndAdd(BadgeId.STREAK_30, stats.streak >= 30);
+    checkAndAdd(BadgeId.LEVEL_10, stats.level >= 10);
+    
+    const last7Days = getPastWeekDates(7);
+    const uniqueLogDaysInLast7 = new Set(Object.keys(logs).filter(dateStr => last7Days.includes(dateStr)));
+    checkAndAdd(BadgeId.PERFECT_WEEK, uniqueLogDaysInLast7.size >= 7);
+
+    const reflectionCount = allLogsFlat.filter(log => log.reflection && log.reflection.trim() !== '').length;
+    checkAndAdd(BadgeId.REFLECTION_KING, reflectionCount >= 50);
+
+    if (updated) {
+        setBadges(Array.from(newBadges));
+    }
+  }, [stats, logs, badges, setBadges]);
+
 
   const handleCompleteAction = async () => {
     if (isCompletedToday || !activeGoal) return;
+
+    setShowConfetti(true);
+    setTimeout(() => setShowConfetti(false), 4000);
 
     const { difficulty, projectId } = activeGoal;
     const newLog: ActionLog = { date: todayStr, reflection: '', goalId: activeGoal.id, projectId, difficulty };
     
     setLogs(prev => ({ ...prev, [todayStr]: [...(prev[todayStr] || []), newLog] }));
-
-    // Recalculate streak immediately after logging
+    
     const currentStreak = checkStreak();
-    // A completion today means streak is at least 1, or currentStreak + 1 if yesterday was completed.
     const newStreak = currentStreak + 1;
     
     setStats(prev => {
@@ -322,20 +353,6 @@ function App() {
         };
     });
 
-    setBadges(prevBadges => {
-      const newBadges = new Set(prevBadges);
-      const xpGained = XP_PER_ACTION[difficulty];
-      const xpForNextLevel = LEVEL_UP_BASE_XP * stats.level;
-      const newLevel = stats.level + (stats.xp + xpGained >= xpForNextLevel ? 1 : 0);
-
-      newBadges.add(BadgeId.FIRST_ACTION);
-      if(newStreak >= 7) newBadges.add(BadgeId.STREAK_7);
-      if(newStreak >= 30) newBadges.add(BadgeId.STREAK_30);
-      if(newLevel >= 10) newBadges.add(BadgeId.LEVEL_10);
-      
-      return Array.from(newBadges);
-    });
-
     setReflectionModalOpen(true);
     setIsLoadingQuote(true);
     const quote = await generateInsightfulQuote(activeGoal.title);
@@ -346,7 +363,7 @@ function App() {
   const handleSaveReflection = (reflection: string) => {
     setLogs(prev => {
       const todayLogs = prev[todayStr] || [];
-      if (todayLogs.length === 0) return prev; // Should not happen
+      if (todayLogs.length === 0) return prev;
       const lastLog = todayLogs[todayLogs.length - 1];
       const updatedLog = { ...lastLog, reflection };
       const updatedTodayLogs = [...todayLogs.slice(0, -1), updatedLog];
@@ -355,11 +372,12 @@ function App() {
     setReflectionModalOpen(false);
   };
   
-  const handleSaveGoal = (goalData: Omit<Goal, 'id' | 'projectId'>, projectId: string, id?: string) => {
+  const handleSaveGoal = (goalData: Omit<Goal, 'id' | 'projectId' | 'q'>, projectId: string, id?: string) => {
+    const q = DIFFICULTY_Q_MAP[goalData.difficulty];
     if (id) {
-      setGoals(prev => prev.map(g => g.id === id ? { ...g, ...goalData, projectId } : g));
+      setGoals(prev => prev.map(g => g.id === id ? { ...g, ...goalData, projectId, q } : g));
     } else {
-      const newGoal = { ...goalData, id: Date.now().toString(), projectId };
+      const newGoal = { ...goalData, id: Date.now().toString(), projectId, q };
       setGoals(prev => [...prev, newGoal]);
       setActiveGoalId(newGoal.id);
     }
@@ -425,6 +443,7 @@ function App() {
   
   return (
     <div className="min-h-screen text-slate-800 font-sans p-4">
+      {showConfetti && <ParticleEffect />}
       {currentView === 'main' ? (
         <>
             <Header 

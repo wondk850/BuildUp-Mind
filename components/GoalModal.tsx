@@ -1,14 +1,13 @@
-
 import React, { useState, useEffect } from 'react';
 import { Modal } from './ui/Modal';
-import { Goal, Difficulty, Project } from '../types';
-import { recommendProbability } from '../services/geminiService';
+import { Goal, Difficulty, Project, GoalTemplate } from '../types';
 import { TrashIcon } from './Icons';
+import { GOAL_TEMPLATES } from '../constants';
 
 interface GoalModalProps {
   isOpen: boolean;
   onClose: () => void;
-  onSave: (goalData: Omit<Goal, 'id' | 'projectId'>, projectId: string, id?: string) => void;
+  onSave: (goalData: Omit<Goal, 'id' | 'projectId' | 'q'>, projectId: string, id?: string) => void;
   onDelete: (id: string) => void;
   projects: Project[];
   setProjects: React.Dispatch<React.SetStateAction<Project[]>>;
@@ -25,18 +24,15 @@ export const GoalModal: React.FC<GoalModalProps> = ({
   existingGoal,
 }) => {
   const [title, setTitle] = useState('');
-  const [q, setQ] = useState(0.05);
   const [difficulty, setDifficulty] = useState<Difficulty>(Difficulty.Normal);
   const [selectedProjectId, setSelectedProjectId] = useState<string>('');
   const [newProjectName, setNewProjectName] = useState('');
   const [isCreatingNewProject, setIsCreatingNewProject] = useState(false);
-  const [isRecommending, setIsRecommending] = useState(false);
 
   useEffect(() => {
     if (isOpen) {
         if (existingGoal) {
             setTitle(existingGoal.title);
-            setQ(existingGoal.q);
             setDifficulty(existingGoal.difficulty);
             setSelectedProjectId(existingGoal.projectId);
             setIsCreatingNewProject(false);
@@ -44,7 +40,6 @@ export const GoalModal: React.FC<GoalModalProps> = ({
         } else {
             // Reset form for new goal
             setTitle('');
-            setQ(0.05);
             setDifficulty(Difficulty.Normal);
             if (projects.length > 0) {
                 setSelectedProjectId(projects[0].id);
@@ -57,23 +52,10 @@ export const GoalModal: React.FC<GoalModalProps> = ({
     }
   }, [existingGoal, isOpen, projects]);
   
-  const handleRecommendation = async () => {
-    if (!title) {
-        alert("목표 제목을 먼저 입력해주세요.");
-        return;
-    }
-    setIsRecommending(true);
-    try {
-        const recommendedQ = await recommendProbability(title);
-        setQ(recommendedQ);
-    } catch (error) {
-        console.error("Failed to get recommendation:", error);
-        alert("AI 추천을 받아오는 데 실패했습니다.");
-    } finally {
-        setIsRecommending(false);
-    }
+  const handleSelectTemplate = (template: GoalTemplate) => {
+    setTitle(template.title);
+    setDifficulty(template.difficulty);
   };
-
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -94,12 +76,40 @@ export const GoalModal: React.FC<GoalModalProps> = ({
         return;
     }
     
-    onSave({ title, q, difficulty }, finalProjectId, existingGoal?.id);
+    onSave({ title, difficulty }, finalProjectId, existingGoal?.id);
   };
 
   return (
     <Modal isOpen={isOpen} onClose={onClose} title={existingGoal ? '목표 수정' : '새 목표 설정'}>
       <form onSubmit={handleSubmit} className="space-y-6">
+        {!existingGoal && (
+            <div className="mb-6">
+                <h3 className="text-lg font-semibold text-slate-800 mb-3">템플릿으로 시작하기</h3>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-3 max-h-48 overflow-y-auto pr-2">
+                {GOAL_TEMPLATES.map(template => (
+                    <button
+                    type="button"
+                    key={template.id}
+                    onClick={() => handleSelectTemplate(template)}
+                    className="text-left p-3 border border-slate-200 rounded-lg hover:bg-indigo-50 hover:border-indigo-300 transition-all focus:outline-none focus:ring-2 focus:ring-indigo-400"
+                    >
+                    <span className="text-xs bg-indigo-100 text-indigo-700 font-semibold py-0.5 px-2 rounded-full">{template.category}</span>
+                    <p className="font-semibold text-slate-800 mt-1">{template.title}</p>
+                    <p className="text-sm text-slate-500">{template.description}</p>
+                    </button>
+                ))}
+                </div>
+                <div className="relative my-6">
+                    <div className="absolute inset-0 flex items-center" aria-hidden="true">
+                        <div className="w-full border-t border-slate-300" />
+                    </div>
+                    <div className="relative flex justify-center">
+                        <span className="bg-white px-2 text-sm text-slate-500">또는 직접 만들기</span>
+                    </div>
+                </div>
+            </div>
+        )}
+        
         <div>
           <label htmlFor="project" className="block text-sm font-medium text-slate-700">
             프로젝트
@@ -149,33 +159,6 @@ export const GoalModal: React.FC<GoalModalProps> = ({
             placeholder="예: 매일 10분씩 책 읽기"
           />
         </div>
-
-        <div>
-            <label className="block text-sm font-medium text-slate-700">
-                일일 성공 확률 (q)
-            </label>
-            <div className="flex items-center gap-2 mt-1">
-                <input
-                    type="number"
-                    step="0.001"
-                    min="0.001"
-                    max="1"
-                    value={q}
-                    onChange={(e) => setQ(Number(e.target.value))}
-                    className="w-full bg-white border border-slate-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 text-slate-900"
-                />
-                <button 
-                    type="button" 
-                    onClick={handleRecommendation}
-                    disabled={isRecommending || !title}
-                    className="p-2 bg-indigo-100 text-indigo-700 rounded-md hover:bg-indigo-200 transition-colors text-sm font-semibold disabled:opacity-50 disabled:cursor-not-allowed flex-shrink-0"
-                >
-                    {isRecommending ? '분석 중...' : 'AI 추천'}
-                </button>
-            </div>
-             <p className="text-xs text-slate-500 mt-1">이 행동을 하루 실천했을 때, 최종 목표에 아주 미세하게 가까워질 확률입니다. (예: 0.001 = 0.1%)</p>
-        </div>
-
 
         <div>
           <label className="block text-sm font-medium text-slate-700">난이도</label>

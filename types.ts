@@ -37,6 +37,8 @@ export enum BadgeId {
   STREAK_30 = 'STREAK_30',
   LEVEL_10 = 'LEVEL_10',
   FIRST_ACTION = 'FIRST_ACTION',
+  PERFECT_WEEK = 'PERFECT_WEEK',
+  REFLECTION_KING = 'REFLECTION_KING',
 }
 
 export interface Badge {
@@ -50,4 +52,12 @@ export interface Badge {
 export interface ChatMessage {
   role: 'user' | 'model';
   content: string;
+}
+
+export interface GoalTemplate {
+  id: string;
+  category: string;
+  title: string;
+  difficulty: Difficulty;
+  description: string;
 }
