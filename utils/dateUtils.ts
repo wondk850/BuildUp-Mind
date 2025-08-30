@@ -52,3 +52,16 @@ export const generateYearHeatmapData = (logs: { [date: string]: ActionLog[] }): 
 
     return data;
 };
+
+export const calculateAchievementDate = (logs: { [date: string]: ActionLog[] }, goalId: string | undefined, count: number): string | null => {
+    if (!goalId) return null;
+    const goalLogs = Object.values(logs)
+        .flat()
+        .filter(log => log.goalId === goalId)
+        .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
+
+    if (goalLogs.length >= count) {
+        return goalLogs[count - 1].date;
+    }
+    return null;
+};

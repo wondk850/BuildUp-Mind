@@ -1,13 +1,16 @@
 
 import React, { useState, useEffect } from 'react';
 import { Modal } from './ui/Modal';
+import { PassionTracker } from './PassionTracker';
+import { DoubtOvercomeHelper } from './DoubtOvercomeHelper';
 
 interface ReflectionModalProps {
   isOpen: boolean;
   onClose: () => void;
-  onSave: (reflection: string) => void;
+  onSave: (reflection: string, passionLevel: number, doubtLevel: number) => void;
   quote: { korean: string; english: string };
   isLoadingQuote: boolean;
+  currentStreak: number;
 }
 
 export const ReflectionModal: React.FC<ReflectionModalProps> = ({
@@ -16,28 +19,33 @@ export const ReflectionModal: React.FC<ReflectionModalProps> = ({
   onSave,
   quote,
   isLoadingQuote,
+  currentStreak,
 }) => {
   const [reflection, setReflection] = useState('');
+  const [passionLevel, setPassionLevel] = useState(5);
+  const [doubtLevel, setDoubtLevel] = useState(0);
 
   useEffect(() => {
     if (isOpen) {
       setReflection('');
+      setPassionLevel(5);
+      setDoubtLevel(0);
     }
   }, [isOpen]);
 
   const handleSave = () => {
-    onSave(reflection);
+    onSave(reflection, passionLevel, doubtLevel);
     onClose();
   };
   
   const handleCloseAndSkip = () => {
-    onSave(''); // Save empty reflection if user just closes
+    onSave('', passionLevel, doubtLevel); // Save levels even if reflection is empty
     onClose();
   };
 
   return (
     <Modal isOpen={isOpen} onClose={handleCloseAndSkip} title="오늘의 성찰">
-      <div className="space-y-4">
+      <div className="space-y-6">
         <div className="p-4 bg-slate-100 border border-slate-200 rounded-lg">
           {isLoadingQuote ? (
             <div className="h-16 flex items-center justify-center">
@@ -56,7 +64,7 @@ export const ReflectionModal: React.FC<ReflectionModalProps> = ({
         </div>
 
         <div>
-          <label htmlFor="reflection" className="block text-sm font-medium text-slate-700">
+          <label htmlFor="reflection" className="block text-sm font-medium text-slate-700 mb-1">
             오늘 행동을 통해 무엇을 배우고 느끼셨나요?
           </label>
           <textarea
@@ -68,6 +76,9 @@ export const ReflectionModal: React.FC<ReflectionModalProps> = ({
             placeholder="자유롭게 기록해보세요..."
           />
         </div>
+
+        <PassionTracker passionLevel={passionLevel} setPassionLevel={setPassionLevel} />
+        <DoubtOvercomeHelper doubtLevel={doubtLevel} setDoubtLevel={setDoubtLevel} currentStreak={currentStreak} />
 
         <div className="flex justify-end gap-2 pt-2">
             <button

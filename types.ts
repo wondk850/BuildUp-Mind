@@ -24,6 +24,8 @@ export interface ActionLog {
   projectId: string;
   difficulty: Difficulty;
   timestamp?: number;
+  passionLevel?: number;
+  doubtLevel?: number;
 }
 
 export interface UserStats {

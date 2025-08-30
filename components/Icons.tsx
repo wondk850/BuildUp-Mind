@@ -104,3 +104,35 @@ export const CogIcon: React.FC<{ className?: string }> = ({ className }) => (
     <path strokeLinecap="round" strokeLinejoin="round" d="M15 12a3 3 0 1 1-6 0 3 3 0 0 1 6 0Z" />
   </svg>
 );
+
+export const SparklesIcon: React.FC<{ className?: string }> = ({ className }) => (
+  <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className={className}>
+    <path strokeLinecap="round" strokeLinejoin="round" d="M9.813 15.904 9 18.75l-.813-2.846a4.5 4.5 0 0 0-3.09-3.09L2.25 12l2.846-.813a4.5 4.5 0 0 0 3.09-3.09L9 5.25l.813 2.846a4.5 4.5 0 0 0 3.09 3.09L15.75 12l-2.846.813a4.5 4.5 0 0 0-3.09 3.09ZM18.259 8.715 18 9.75l-.259-1.035a3.375 3.375 0 0 0-2.455-2.456L14.25 6l1.036-.259a3.375 3.375 0 0 0 2.455-2.456L18 2.25l.259 1.035a3.375 3.375 0 0 0 2.456 2.456L21.75 6l-1.035.259a3.375 3.375 0 0 0-2.456 2.456Z" />
+  </svg>
+);
+
+export const ShieldCheckIcon: React.FC<{ className?: string }> = ({ className }) => (
+  <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className={className}>
+    <path strokeLinecap="round" strokeLinejoin="round" d="M9 12.75 11.25 15 15 9.75M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z" />
+    <path strokeLinecap="round" strokeLinejoin="round" d="M12 21.75c2.306 0 4.504-.84 6.19-2.324a10.456 10.456 0 0 0 3.81-6.19C22.66 9.504 21.84 7.306 20.364 5.62a10.456 10.456 0 0 0-6.19-3.81C10.496-1.16 8.298-.34 6.62.136a10.456 10.456 0 0 0-6.19 3.81C-1.16 7.504-.34 9.702.136 11.38c.478 1.678 1.48 3.25 2.956 4.504a10.456 10.456 0 0 0 6.19 3.81 10.322 10.322 0 0 0 2.718 0Z" />
+  </svg>
+);
+
+export const RoadIcon: React.FC<{ className?: string }> = ({ className }) => (
+  <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className={className}>
+    <path strokeLinecap="round" strokeLinejoin="round" d="M6 6.878V6a2.25 2.25 0 0 1 2.25-2.25h7.5A2.25 2.25 0 0 1 18 6v.878m-12 0A2.25 2.25 0 0 0 4.5 9v11.25A2.25 2.25 0 0 0 6.75 22.5h10.5A2.25 2.25 0 0 0 19.5 20.25V9A2.25 2.25 0 0 0 17.25 6.878m-12 0h10.5" />
+  </svg>
+);
+
+export const BrainIcon: React.FC<{ className?: string }> = ({ className }) => (
+  <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className={className}>
+    <path strokeLinecap="round" strokeLinejoin="round" d="M9.53 16.122a3 3 0 0 0-5.78 1.128 2.25 2.25 0 0 1-2.475 2.118A2.25 2.25 0 0 0 1 18c0-1.381.97-2.5 2.25-2.5S5.5 16.881 5.5 18c0 .347-.086.686-.244.978.243-.149.525-.24.832-.24.282 0 .55.092.797.247a.75.75 0 0 1-.464-1.328l.243-.148a.64.64 0 0 1 .636-.057l.244.149.06.036c.49.295.87.755.87 1.284 0 .529-.38.99-.87 1.284l-.06.036a.64.64 0 0 1-.636-.057l-.244-.149a.75.75 0 0 1 .464-1.328 2.25 2.25 0 0 0-1.805-2.118ZM12.25 6.118a.75.75 0 0 0-1.5 0v3.364a.75.75 0 0 0 .523.714l2.1 1.05a.75.75 0 0 0 .523-1.428L12.25 9.477V6.118Z" />
+    <path strokeLinecap="round" strokeLinejoin="round" d="M5.228 10.811a8.253 8.253 0 0 1 2.128-2.64V6.323a.75.75 0 1 1 1.5 0V8.4a8.173 8.173 0 0 1 4.296 0V6.323a.75.75 0 1 1 1.5 0v2.122c.677.6 1.308 1.258 1.848 1.968a.75.75 0 0 1-1.12.98A6.683 6.683 0 0 0 12 11.125a6.683 6.683 0 0 0-3.354 1.634.75.75 0 0 1-1.12-.98Z" />
+  </svg>
+);
+
+export const HeartIcon: React.FC<{ className?: string }> = ({ className }) => (
+  <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className={className}>
+    <path strokeLinecap="round" strokeLinejoin="round" d="M21 8.25c0-2.485-2.099-4.5-4.688-4.5-1.935 0-3.597 1.126-4.312 2.733-.715-1.607-2.377-2.733-4.313-2.733C5.1 3.75 3 5.765 3 8.25c0 7.22 9 12 9 12s9-4.78 9-12Z" />
+  </svg>
+);

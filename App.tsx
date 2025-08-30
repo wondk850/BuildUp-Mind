@@ -18,6 +18,9 @@ import { ActionLogDetailModal } from './components/ActionLogDetailModal';
 import { LevelUpModal } from './components/LevelUpModal';
 import { ParticleEffect } from './components/ParticleEffect';
 import { SettingsModal } from './components/SettingsModal';
+import { ProbabilityMagicExplainer } from './components/ProbabilityMagicExplainer';
+import { FutureTrustBuilder } from './components/FutureTrustBuilder';
+import { BuildupStoryVisualization } from './components/BuildupStoryVisualization';
 
 
 // Helper to get today's date string
@@ -77,7 +80,7 @@ const Header: React.FC<HeaderProps> = ({ level, xp, xpForNextLevel, streak, proj
 
   return (
     <header className="p-4 mb-8">
-      <div className="max-w-4xl mx-auto">
+      <div className="max-w-7xl mx-auto">
         <h1 className="text-4xl md:text-5xl font-bold text-center text-indigo-600 mb-2 tracking-tight">
           BuildUp Mind
         </h1>
@@ -347,7 +350,7 @@ function App() {
     setTimeout(() => setShowConfetti(false), 4000);
 
     const { difficulty, projectId } = activeGoal;
-    const newLog: ActionLog = { date: todayStr, reflection: '', goalId: activeGoal.id, projectId, difficulty, timestamp: Date.now() };
+    const newLog: ActionLog = { date: todayStr, reflection: '', goalId: activeGoal.id, projectId, difficulty, timestamp: Date.now(), passionLevel: 5, doubtLevel: 0 };
     
     setLogs(prev => ({ ...prev, [todayStr]: [...(prev[todayStr] || []), newLog] }));
     
@@ -382,12 +385,12 @@ function App() {
     setIsLoadingQuote(false);
   };
 
-  const handleSaveReflection = (reflection: string) => {
+  const handleSaveReflection = (reflection: string, passionLevel: number, doubtLevel: number) => {
     setLogs(prev => {
       const todayLogs = prev[todayStr] || [];
       if (todayLogs.length === 0) return prev;
       const lastLog = todayLogs[todayLogs.length - 1];
-      const updatedLog = { ...lastLog, reflection };
+      const updatedLog = { ...lastLog, reflection, passionLevel, doubtLevel };
       const updatedTodayLogs = [...todayLogs.slice(0, -1), updatedLog];
       return { ...prev, [todayStr]: updatedTodayLogs };
     });
@@ -536,42 +539,49 @@ function App() {
                 onOpenSettings={() => setIsSettingsModalOpen(true)}
             />
             
-            <main className="max-w-4xl mx-auto grid grid-cols-1 lg:grid-cols-3 gap-8">
-                <div className="lg:col-span-2 space-y-8">
-                {activeGoal ? (
-                    <ActionCard 
-                    goal={activeGoal} 
-                    isCompletedToday={isCompletedToday} 
-                    onComplete={handleCompleteAction} 
-                    onEdit={() => handleEditGoal(activeGoal)} 
-                    />
-                ) : (
-                    <Card className="text-center py-10">
-                        <p className="text-slate-500 mb-4">"오늘의 1%가 내일의 가능성을 만듭니다."</p>
-                        <button onClick={handleAddNewGoal} className="bg-indigo-600 text-white font-bold py-3 px-6 rounded-lg hover:bg-indigo-700 transition-all">
-                            첫 목표 설정하기
-                        </button>
+            <main className="max-w-7xl mx-auto grid grid-cols-1 lg:grid-cols-12 gap-8">
+                {/* Left Column: Past & Long-term Growth */}
+                <div className="lg:col-span-5 space-y-8">
+                    <BuildupStoryVisualization logs={logs} goal={activeGoal} completedDays={completedDaysCount} />
+                    <HistoryCalendar logs={logs} onDayClick={handleDayClick}/>
+                    <Card>
+                        <h2 className="text-xl font-bold text-indigo-600 mb-4 flex items-center gap-2"><BadgeIcon className="w-6 h-6"/>획득한 배지</h2>
+                        <div className="space-y-3">
+                        {allBadges.map(badge => (
+                            <div key={badge.id} className={`flex items-center gap-3 p-2 rounded-md transition-all ${badge.earned ? 'bg-slate-100' : 'bg-slate-50 opacity-60'}`}>
+                                <div className={`flex-shrink-0 ${badge.earned ? 'text-yellow-400' : 'text-slate-400'}`}>{badge.icon}</div>
+                                <div>
+                                    <p className={`font-semibold ${badge.earned ? 'text-slate-800' : 'text-slate-500'}`}>{badge.name}</p>
+                                    <p className="text-xs text-slate-500">{badge.description}</p>
+                                </div>
+                            </div>
+                        ))}
+                        </div>
                     </Card>
-                )}
-                <ProbabilitySimulator goal={activeGoal} completedDays={completedDaysCount} />
                 </div>
                 
-                <div className="space-y-8">
-                <Card>
-                    <h2 className="text-xl font-bold text-indigo-600 mb-4 flex items-center gap-2"><BadgeIcon className="w-6 h-6"/>획득한 배지</h2>
-                    <div className="space-y-3">
-                    {allBadges.map(badge => (
-                        <div key={badge.id} className={`flex items-center gap-3 p-2 rounded-md transition-all ${badge.earned ? 'bg-slate-100' : 'bg-slate-50 opacity-60'}`}>
-                            <div className={`flex-shrink-0 ${badge.earned ? 'text-yellow-400' : 'text-slate-400'}`}>{badge.icon}</div>
-                            <div>
-                                <p className={`font-semibold ${badge.earned ? 'text-slate-800' : 'text-slate-500'}`}>{badge.name}</p>
-                                <p className="text-xs text-slate-500">{badge.description}</p>
-                            </div>
-                        </div>
-                    ))}
-                    </div>
-                </Card>
-                <HistoryCalendar logs={logs} onDayClick={handleDayClick}/>
+                {/* Right Column: Today's Action & Direct Results */}
+                <div className="lg:col-span-7 space-y-8">
+                    {activeGoal ? (
+                        <>
+                            <ActionCard 
+                                goal={activeGoal} 
+                                isCompletedToday={isCompletedToday} 
+                                onComplete={handleCompleteAction} 
+                                onEdit={() => handleEditGoal(activeGoal)} 
+                            />
+                            <ProbabilitySimulator goal={activeGoal} completedDays={completedDaysCount} />
+                            <ProbabilityMagicExplainer goal={activeGoal} completedDays={completedDaysCount} />
+                            <FutureTrustBuilder goal={activeGoal} stats={stats} logs={logs} />
+                        </>
+                    ) : (
+                        <Card className="text-center py-10 lg:col-span-12">
+                            <p className="text-slate-500 mb-4">"오늘의 1%가 내일의 가능성을 만듭니다."</p>
+                            <button onClick={handleAddNewGoal} className="bg-indigo-600 text-white font-bold py-3 px-6 rounded-lg hover:bg-indigo-700 transition-all">
+                                첫 목표 설정하기
+                            </button>
+                        </Card>
+                    )}
                 </div>
             </main>
         </>
@@ -623,6 +633,7 @@ function App() {
         onSave={handleSaveReflection}
         quote={insightfulQuote}
         isLoadingQuote={isLoadingQuote}
+        currentStreak={stats.streak}
       />
 
       <ActionLogDetailModal
